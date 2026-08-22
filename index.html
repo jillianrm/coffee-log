@@ -201,7 +201,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
    before the map sees them. These rules are gated behind the .standalone class
    (set from JS via navigator.standalone) so a normal Safari tab is unaffected. */
 html.standalone{overscroll-behavior:none}
-html.standalone #map{touch-action:none}
+html.standalone #map, html.standalone #map *{touch-action:none}
 html.standalone body[data-pane="map"]{overflow:hidden}
 
 @media (max-width:900px) and (min-width:761px){
@@ -552,6 +552,11 @@ const isPhone = () => matchMedia('(max-width:760px)').matches;
 /* Home-screen app on iOS, or an installed PWA elsewhere. Gates the touch CSS. */
 if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches){
   document.documentElement.classList.add('standalone');
+  /* In standalone mode the document treats drags as page scrolling and the map
+     never sees them. Cancelling the default over the map hands them back. */
+  document.addEventListener('touchmove', e => {
+    if (e.target && e.target.closest && e.target.closest('#map')) e.preventDefault();
+  }, { passive: false });
 }
 
 function setPane(p){
