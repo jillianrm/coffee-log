@@ -1,6 +1,6 @@
 {
-  "name": "Cupping Log",
-  "short_name": "Cupping Log",
+  "name": "Coffee Log",
+  "short_name": "Coffee Log",
   "description": "A personal record of coffee drinks, shop by shop.",
   "start_url": "./",
   "scope": "./",

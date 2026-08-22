@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cupping Log</title>
+<title>Coffee Log</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#ECEFF1">
@@ -192,7 +192,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 <body>
 
 <header class="masthead">
-  <h1 class="wordmark">Cupping Log<span class="dot">.</span></h1>
+  <h1 class="wordmark">Coffee Log<span class="dot">.</span></h1>
   <span class="tagline">personal coffee record</span>
   <nav>
     <button data-view="map" aria-current="true">Map</button>
@@ -800,7 +800,7 @@ $('#export-btn').addEventListener('click', () => {
   const payload = { exportedAt:new Date().toISOString(), version:1, shops:db.shops, ratings:db.ratings };
   const url = URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)], {type:'application/json'}));
   const a = document.createElement('a');
-  a.href = url; a.download = `cupping-log-${new Date().toISOString().slice(0,10)}.json`;
+  a.href = url; a.download = `coffee-log-${new Date().toISOString().slice(0,10)}.json`;
   a.click(); URL.revokeObjectURL(url);
 });
 
@@ -810,7 +810,7 @@ $('#import-file').addEventListener('change', async e => {
   if (!file) return;
   try {
     const data = JSON.parse(await file.text());
-    if (!data.shops || !Array.isArray(data.ratings)) throw new Error('Not a Cupping Log export');
+    if (!data.shops || !Array.isArray(data.ratings)) throw new Error('Not a Coffee Log export');
     const before = db.ratings.length;
     Object.assign(db.shops, data.shops);
     const seen = new Set(db.ratings.map(r => r.id));

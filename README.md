@@ -1,4 +1,4 @@
-# Cupping Log
+# Coffee Log
 
 A private record of coffee drinks by shop. No accounts, no sharing, no server. Ratings live in your browser's local storage; the only backup is the JSON file you export.
 
@@ -33,13 +33,13 @@ The app requests only `id`, `displayName`, `formattedAddress`, and `location`. I
 ```bash
 git init
 git add index.html manifest.json icon.svg README.md
-git commit -m "Cupping Log"
+git commit -m "Coffee Log"
 git branch -M main
-git remote add origin https://github.com/YOURNAME/cupping-log.git
+git remote add origin https://github.com/YOURNAME/coffee-log.git
 git push -u origin main
 ```
 
-Then **Settings → Pages → Source: Deploy from a branch → main / (root)**. Live at `https://YOURNAME.github.io/cupping-log/` within a minute or two.
+Then **Settings → Pages → Source: Deploy from a branch → main / (root)**. Live at `https://YOURNAME.github.io/coffee-log/` within a minute or two.
 
 **Your API key is not in this repository.** You paste it into the app's Settings tab once, and it's stored in local storage on that machine. Never hardcode it into `index.html` — public repos get scraped for keys within days.
 
