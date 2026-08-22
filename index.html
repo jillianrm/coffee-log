@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Coffee Log">
 <title>Coffee Log</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -66,7 +69,8 @@ main{padding:var(--gap)}
   text-transform:uppercase;color:var(--muted);
 }
 .searchbar{display:flex;gap:8px;margin-bottom:14px}
-input[type=text],input[type=search],input[type=date],input[type=number],select,textarea{
+input[type=text],input[type=search],input[type=date],input[type=number],
+input[type=email],input[type=password],select,textarea{
   font-family:"Public Sans",sans-serif;font-size:14px;color:var(--ink);
   background:var(--card);border:1px solid var(--rule);border-radius:var(--radius);
   padding:8px 10px;width:100%;
@@ -184,13 +188,73 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   display:flex;align-items:center;justify-content:center;padding:20px;
 }
 .gate .wordmark{font-size:19px;text-transform:uppercase;margin-bottom:18px;display:block}
-@media (max-width:900px){
+/* segmented control — phone only */
+.segmented{display:none;gap:0;margin-bottom:12px;border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden}
+.segmented button{
+  flex:1;font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:0.09em;
+  text-transform:uppercase;background:var(--card);color:var(--muted);border:0;padding:11px 8px;cursor:pointer;
+}
+.segmented button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+@media (max-width:900px) and (min-width:761px){
   .split{grid-template-columns:1fr}
   #map{height:52vh;min-height:300px}
   .panel{max-height:none}
-  .rank{grid-template-columns:26px minmax(0,1fr);}
+  .rank{grid-template-columns:26px minmax(0,1fr)}
   .rank .strip{grid-column:1/-1}
   .shoprow{grid-template-columns:1fr}
+}
+
+/* ---------- phone ---------- */
+@media (max-width:760px){
+  .masthead{padding:10px 14px 9px;gap:10px}
+  .wordmark{font-size:17px}
+  .tagline{display:none}
+  #sync{display:inline;margin-left:auto;font-size:10px}
+
+  /* nav becomes a thumb-reachable bottom bar */
+  nav{
+    position:fixed;left:0;right:0;bottom:0;margin:0;z-index:60;
+    background:var(--card);border-top:1px solid var(--rule);
+    display:flex;justify-content:space-around;
+    padding:4px 4px calc(4px + env(safe-area-inset-bottom));
+  }
+  nav button{flex:1;padding:12px 2px;font-size:10px;letter-spacing:0.06em;border-radius:0}
+  nav button[aria-current="true"]{background:transparent;border-color:transparent;
+    color:var(--cherry);box-shadow:inset 0 2px 0 var(--cherry)}
+
+  main{padding:12px 12px calc(78px + env(safe-area-inset-bottom))}
+  .split{grid-template-columns:1fr;gap:0}
+  .segmented{display:flex}
+
+  /* one pane at a time, so the form isn't buried under the map */
+  body[data-pane="map"] #panel{display:none}
+  body[data-pane="panel"] #map-wrap{display:none}
+
+  /* dvh, so the layout doesn't jump when Safari's toolbar hides */
+  #map{height:calc(100dvh - 200px);min-height:300px}
+  .panel{max-height:none;overflow:visible}
+  .panel-pad{padding:14px 14px 20px}
+
+  /* 16px stops iOS zooming in on focus */
+  input[type=text],input[type=search],input[type=date],input[type=number],
+  input[type=email],input[type=password],select,textarea{font-size:16px;padding:11px 12px}
+
+  .btn{padding:12px 16px;font-size:11px}
+  .btn.sm{padding:9px 12px}
+  .linkbtn{font-size:12.5px;padding:6px 0}
+  .result{padding:14px 4px}
+  .chip{padding:9px 13px}
+
+  .strip .lbl{min-width:0;flex:1 1 auto;font-size:12.5px}
+  .strip .val{min-width:30px}
+  .rank{grid-template-columns:24px minmax(0,1fr);gap:10px;padding:12px 0}
+  .rank .strip{grid-column:1/-1}
+  .shoprow{grid-template-columns:1fr;gap:10px}
+  .score-input .readout{font-size:30px}
+  .shop-title{font-size:20px}
+  .row{flex-direction:column}
+  .gate{padding:16px;align-items:flex-start;padding-top:8vh;overflow-y:auto}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -250,8 +314,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
     <button class="btn cherry" id="setup-save">Load the map</button>
   </div>
 
+  <div class="segmented" id="mobile-toggle">
+    <button data-pane="map" aria-pressed="true">Map</button>
+    <button data-pane="panel" aria-pressed="false">Details</button>
+  </div>
+
   <div class="split" id="map-split">
-    <div class="frame"><div id="map"></div></div>
+    <div class="frame" id="map-wrap"><div id="map"></div></div>
     <div class="frame panel" id="panel"></div>
   </div>
 </section>
@@ -469,6 +538,23 @@ function strip(score, label, tiny){
   </div>`;
 }
 
+/* On phones the map and the detail panel share the screen, one at a time. */
+const isPhone = () => matchMedia('(max-width:760px)').matches;
+
+function setPane(p){
+  document.body.dataset.pane = p;
+  document.querySelectorAll('#mobile-toggle button').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.pane === p)));
+  if (p === 'map' && window.google && map){
+    google.maps.event.trigger(map, 'resize');
+  } else {
+    scrollTo(0, 0);
+  }
+}
+document.body.dataset.pane = 'map';
+document.querySelectorAll('#mobile-toggle button').forEach(b =>
+  b.addEventListener('click', () => setPane(b.dataset.pane)));
+
 function switchView(name){
   document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-'+name));
   document.querySelectorAll('nav button').forEach(b =>
@@ -604,6 +690,7 @@ function renderPanelHome(){
   $('#go').addEventListener('click', doTextSearch);
   $('#q').addEventListener('keydown', e => { if (e.key === 'Enter') doTextSearch(); });
   $('#nearby').addEventListener('click', doNearby);
+  if (isPhone()) setPane('panel');
   renderResults(Object.values(db.shops).slice(0,50), 'Your shops');
 }
 
@@ -663,6 +750,7 @@ async function doNearby(){
 
 function openShop(place, editingId){
   if (!place) return;
+  if (isPhone()) setPane('panel');
   selectedId = place.id;
   const saved = db.shops[place.id];
   const shop = saved || place;
@@ -743,7 +831,7 @@ function openShop(place, editingId){
           </div>`).join('')}</div>` : ''}
     </div>`;
 
-  $('#back').addEventListener('click', renderPanelHome);
+  $('#back').addEventListener('click', () => { renderPanelHome(); if (isPhone()) setPane('map'); });
   $('#drink').addEventListener('change', e => {
     $('#custom-wrap').hidden = e.target.value !== '__other';
     if (e.target.value === '__other') $('#custom').focus();
