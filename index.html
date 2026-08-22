@@ -653,6 +653,7 @@ window.initMap = async function(){
   }
   drawMarkers();
   renderPanelHome();
+  map.addListener('idle', scheduleAutoSearch);
 };
 
 async function drawMarkers(){
@@ -694,7 +695,7 @@ function renderPanelHome(){
         <input type="search" id="q" placeholder="Name or address" autocomplete="off">
         <button class="btn" id="go">Search</button>
       </div>
-      <button class="btn ghost sm" id="nearby">Search this map area</button>
+      <button class="btn ghost sm" id="nearby">Refresh this area</button>
       <div id="results" style="margin-top:14px"></div>
     </div>`;
   $('#go').addEventListener('click', doTextSearch);
@@ -744,6 +745,7 @@ async function doTextSearch(){
 }
 
 async function doNearby(){
+  lastAutoKey = '';
   $('#results').innerHTML = `<div class="empty">Searching…</div>`;
   try {
     const b = map.getBounds();
@@ -754,6 +756,48 @@ async function doNearby(){
     drawMarkers();
   } catch(e){
     $('#results').innerHTML = `<div class="warn">Search failed: ${esc(e.message)}</div>`;
+  }
+}
+
+/* Automatic nearby search.
+   Fires when the map settles, but only if the view actually moved and we're
+   zoomed in enough for the results to be meaningful. Each call bills against
+   the Places quota, so the dedupe key and the zoom floor matter. */
+let autoTimer = null, lastAutoKey = '', autoBusy = false;
+const AUTO_MIN_ZOOM = 13;
+
+function scheduleAutoSearch(){
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(autoSearch, 700);
+}
+
+async function autoSearch(){
+  if (!map || autoBusy) return;
+  const z = map.getZoom();
+  if (z < AUTO_MIN_ZOOM){
+    const box = $('#results');
+    if (box && !lastResults.length){
+      box.innerHTML = `<div class="empty">Zoom in to see coffee shops in this area.</div>`;
+    }
+    return;
+  }
+  const c = map.getCenter();
+  const key = `${c.lat().toFixed(3)},${c.lng().toFixed(3)},${z}`;
+  if (key === lastAutoKey) return;
+  lastAutoKey = key;
+
+  autoBusy = true;
+  try {
+    const b = map.getBounds();
+    const { spherical } = await google.maps.importLibrary('geometry');
+    const radius = spherical.computeDistanceBetween(b.getNorthEast(), b.getSouthWest()) / 2;
+    lastResults = await Places.searchNearby(c, radius);
+    drawMarkers();
+    renderResults(lastResults, `${lastResults.length} in view`);
+  } catch(e){
+    console.warn('Auto search failed:', e.message);
+  } finally {
+    autoBusy = false;
   }
 }
 
