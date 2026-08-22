@@ -542,15 +542,23 @@ function strip(score, label, tiny){
 const isPhone = () => matchMedia('(max-width:760px)').matches;
 
 function setPane(p){
+  const prev = document.body.dataset.pane;
+  if (prev === 'map' && p !== 'map' && map) lastCenter = map.getCenter();
   document.body.dataset.pane = p;
   document.querySelectorAll('#mobile-toggle button').forEach(b =>
     b.setAttribute('aria-pressed', String(b.dataset.pane === p)));
-  if (p === 'map' && window.google && map){
-    google.maps.event.trigger(map, 'resize');
+
+  if (p === 'map' && map){
+    // The container was display:none, so the map has stale dimensions.
+    requestAnimationFrame(() => {
+      if (lastCenter) map.setCenter(lastCenter);
+      drawMarkers();
+    });
   } else {
     scrollTo(0, 0);
   }
 }
+let lastCenter = null;
 document.body.dataset.pane = 'map';
 document.querySelectorAll('#mobile-toggle button').forEach(b =>
   b.addEventListener('click', () => setPane(b.dataset.pane)));
@@ -634,7 +642,9 @@ window.initMap = async function(){
   }
   map = new Map($('#map'), {
     center, zoom, mapId:'DEMO_MAP_ID',
-    mapTypeControl:false, streetViewControl:false, fullscreenControl:false
+    mapTypeControl:false, streetViewControl:false, fullscreenControl:false,
+    zoomControl:true,
+    gestureHandling:'greedy'   // one finger pans; 'auto' demands two on touch
   });
   if (!visited.length && navigator.geolocation){
     navigator.geolocation.getCurrentPosition(
@@ -690,7 +700,6 @@ function renderPanelHome(){
   $('#go').addEventListener('click', doTextSearch);
   $('#q').addEventListener('keydown', e => { if (e.key === 'Enter') doTextSearch(); });
   $('#nearby').addEventListener('click', doNearby);
-  if (isPhone()) setPane('panel');
   renderResults(Object.values(db.shops).slice(0,50), 'Your shops');
 }
 
