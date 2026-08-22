@@ -206,16 +206,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
       <label class="eyebrow" for="email">Email</label>
       <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
     </div>
-    <button class="btn cherry" id="send-code">Email me a code</button>
-    <div id="code-step" hidden>
-      <hr class="divider">
-      <div class="field">
-        <label class="eyebrow" for="code">Six-digit code</label>
-        <input type="text" id="code" inputmode="numeric" maxlength="6"
-               autocomplete="one-time-code" placeholder="000000">
-      </div>
-      <button class="btn cherry" id="verify-code">Sign in</button>
-      <button class="linkbtn" id="resend" style="margin-left:12px">send another</button>
+    <div class="field">
+      <label class="eyebrow" for="password">Password</label>
+      <input type="password" id="password" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <div class="row" style="max-width:320px">
+      <button class="btn cherry" id="signin-btn">Sign in</button>
+      <button class="btn ghost" id="signup-btn">Create account</button>
     </div>
     <div id="auth-msg" class="mono" style="font-size:12px;color:var(--muted);margin-top:14px"></div>
   </div>
@@ -961,32 +958,34 @@ function authMsg(t, bad){
   el.style.color = bad ? 'var(--cherry)' : 'var(--muted)';
 }
 
-$('#send-code').addEventListener('click', sendCode);
-$('#resend').addEventListener('click', sendCode);
-$('#email').addEventListener('keydown', e => { if (e.key === 'Enter') sendCode(); });
-$('#code').addEventListener('keydown', e => { if (e.key === 'Enter') verifyCode(); });
-$('#verify-code').addEventListener('click', verifyCode);
+$('#signin-btn').addEventListener('click', () => doAuth('in'));
+$('#signup-btn').addEventListener('click', () => doAuth('up'));
+$('#email').addEventListener('keydown', e => { if (e.key === 'Enter') $('#password').focus(); });
+$('#password').addEventListener('keydown', e => { if (e.key === 'Enter') doAuth('in'); });
 
-async function sendCode(){
+async function doAuth(mode){
   const email = $('#email').value.trim();
-  if (!email) { authMsg('Enter your email address.', true); return; }
-  authMsg('Sending…');
-  const { error } = await sb.auth.signInWithOtp({
-    email, options: { shouldCreateUser: true }
-  });
-  if (error) { authMsg(error.message, true); return; }
-  $('#code-step').hidden = false;
-  $('#code').focus();
-  authMsg('Check your email. Enter the six-digit code, or click the link in the message.');
-}
+  const password = $('#password').value;
+  if (!email || !password) { authMsg('Email and password are both required.', true); return; }
+  if (mode === 'up' && password.length < 8) {
+    authMsg('Use at least 8 characters.', true); return;
+  }
+  authMsg(mode === 'up' ? 'Creating account…' : 'Signing in…');
 
-async function verifyCode(){
-  const email = $('#email').value.trim();
-  const token = $('#code').value.trim();
-  if (token.length < 6) { authMsg('The code is six digits.', true); return; }
-  authMsg('Checking…');
-  const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
-  if (error) { authMsg(error.message, true); return; }
+  const { data, error } = mode === 'up'
+    ? await sb.auth.signUp({ email, password })
+    : await sb.auth.signInWithPassword({ email, password });
+
+  if (error){
+    authMsg(error.message === 'Invalid login credentials'
+      ? 'Wrong email or password. If this is your first time, use Create account.'
+      : error.message, true);
+    return;
+  }
+  if (!data.session){
+    authMsg('Account created. Check your email to confirm it, then sign in.');
+    return;
+  }
   session = data.session;
   await afterAuth();
 }
