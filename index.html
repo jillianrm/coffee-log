@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Coffee Log">
 <title>Coffee Log</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -66,7 +69,8 @@ main{padding:var(--gap)}
   text-transform:uppercase;color:var(--muted);
 }
 .searchbar{display:flex;gap:8px;margin-bottom:14px}
-input[type=text],input[type=search],input[type=date],input[type=number],select,textarea{
+input[type=text],input[type=search],input[type=date],input[type=number],
+input[type=email],input[type=password],select,textarea{
   font-family:"Public Sans",sans-serif;font-size:14px;color:var(--ink);
   background:var(--card);border:1px solid var(--rule);border-radius:var(--radius);
   padding:8px 10px;width:100%;
@@ -184,13 +188,81 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   display:flex;align-items:center;justify-content:center;padding:20px;
 }
 .gate .wordmark{font-size:19px;text-transform:uppercase;margin-bottom:18px;display:block}
-@media (max-width:900px){
+/* segmented control — phone only */
+.segmented{display:none;gap:0;margin-bottom:12px;border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden}
+.segmented button{
+  flex:1;font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:0.09em;
+  text-transform:uppercase;background:var(--card);color:var(--muted);border:0;padding:11px 8px;cursor:pointer;
+}
+.segmented button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+/* ---------- installed app only ----------
+   iOS standalone mode makes the document the scroller, and it swallows drags
+   before the map sees them. These rules are gated behind the .standalone class
+   (set from JS via navigator.standalone) so a normal Safari tab is unaffected. */
+html.standalone{overscroll-behavior:none}
+html.standalone #map{touch-action:none}
+html.standalone body[data-pane="map"]{overflow:hidden}
+
+@media (max-width:900px) and (min-width:761px){
   .split{grid-template-columns:1fr}
   #map{height:52vh;min-height:300px}
   .panel{max-height:none}
-  .rank{grid-template-columns:26px minmax(0,1fr);}
+  .rank{grid-template-columns:26px minmax(0,1fr)}
   .rank .strip{grid-column:1/-1}
   .shoprow{grid-template-columns:1fr}
+}
+
+/* ---------- phone ---------- */
+@media (max-width:760px){
+  .masthead{padding:10px 14px 9px;gap:10px}
+  .wordmark{font-size:17px}
+  .tagline{display:none}
+  #sync{display:inline;margin-left:auto;font-size:10px}
+
+  /* nav becomes a thumb-reachable bottom bar */
+  nav{
+    position:fixed;left:0;right:0;bottom:0;margin:0;z-index:60;
+    background:var(--card);border-top:1px solid var(--rule);
+    display:flex;justify-content:space-around;
+    padding:4px 4px calc(4px + env(safe-area-inset-bottom));
+  }
+  nav button{flex:1;padding:12px 2px;font-size:10px;letter-spacing:0.06em;border-radius:0}
+  nav button[aria-current="true"]{background:transparent;border-color:transparent;
+    color:var(--cherry);box-shadow:inset 0 2px 0 var(--cherry)}
+
+  main{padding:12px 12px calc(78px + env(safe-area-inset-bottom))}
+  .split{grid-template-columns:1fr;gap:0}
+  .segmented{display:flex}
+
+  /* one pane at a time, so the form isn't buried under the map */
+  body[data-pane="map"] #panel{display:none}
+  body[data-pane="panel"] #map-wrap{display:none}
+
+  /* dvh, so the layout doesn't jump when Safari's toolbar hides */
+  #map{height:calc(100dvh - 200px);min-height:300px}
+  .panel{max-height:none;overflow:visible}
+  .panel-pad{padding:14px 14px 20px}
+
+  /* 16px stops iOS zooming in on focus */
+  input[type=text],input[type=search],input[type=date],input[type=number],
+  input[type=email],input[type=password],select,textarea{font-size:16px;padding:11px 12px}
+
+  .btn{padding:12px 16px;font-size:11px}
+  .btn.sm{padding:9px 12px}
+  .linkbtn{font-size:12.5px;padding:6px 0}
+  .result{padding:14px 4px}
+  .chip{padding:9px 13px}
+
+  .strip .lbl{min-width:0;flex:1 1 auto;font-size:12.5px}
+  .strip .val{min-width:30px}
+  .rank{grid-template-columns:24px minmax(0,1fr);gap:10px;padding:12px 0}
+  .rank .strip{grid-column:1/-1}
+  .shoprow{grid-template-columns:1fr;gap:10px}
+  .score-input .readout{font-size:30px}
+  .shop-title{font-size:20px}
+  .row{flex-direction:column}
+  .gate{padding:16px;align-items:flex-start;padding-top:8vh;overflow-y:auto}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -206,16 +278,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
       <label class="eyebrow" for="email">Email</label>
       <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
     </div>
-    <button class="btn cherry" id="send-code">Email me a code</button>
-    <div id="code-step" hidden>
-      <hr class="divider">
-      <div class="field">
-        <label class="eyebrow" for="code">Six-digit code</label>
-        <input type="text" id="code" inputmode="numeric" maxlength="6"
-               autocomplete="one-time-code" placeholder="000000">
-      </div>
-      <button class="btn cherry" id="verify-code">Sign in</button>
-      <button class="linkbtn" id="resend" style="margin-left:12px">send another</button>
+    <div class="field">
+      <label class="eyebrow" for="password">Password</label>
+      <input type="password" id="password" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <div class="row" style="max-width:320px">
+      <button class="btn cherry" id="signin-btn">Sign in</button>
+      <button class="btn ghost" id="signup-btn">Create account</button>
     </div>
     <div id="auth-msg" class="mono" style="font-size:12px;color:var(--muted);margin-top:14px"></div>
   </div>
@@ -253,8 +322,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
     <button class="btn cherry" id="setup-save">Load the map</button>
   </div>
 
+  <div class="segmented" id="mobile-toggle">
+    <button data-pane="map" aria-pressed="true">Map</button>
+    <button data-pane="panel" aria-pressed="false">Details</button>
+  </div>
+
   <div class="split" id="map-split">
-    <div class="frame"><div id="map"></div></div>
+    <div class="frame" id="map-wrap"><div id="map"></div></div>
     <div class="frame panel" id="panel"></div>
   </div>
 </section>
@@ -472,6 +546,36 @@ function strip(score, label, tiny){
   </div>`;
 }
 
+/* On phones the map and the detail panel share the screen, one at a time. */
+const isPhone = () => matchMedia('(max-width:760px)').matches;
+
+/* Home-screen app on iOS, or an installed PWA elsewhere. Gates the touch CSS. */
+if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches){
+  document.documentElement.classList.add('standalone');
+}
+
+function setPane(p){
+  const prev = document.body.dataset.pane;
+  if (prev === 'map' && p !== 'map' && map) lastCenter = map.getCenter();
+  document.body.dataset.pane = p;
+  document.querySelectorAll('#mobile-toggle button').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.pane === p)));
+
+  if (p === 'map' && map){
+    // The container was display:none, so the map has stale dimensions.
+    requestAnimationFrame(() => {
+      if (lastCenter) map.setCenter(lastCenter);
+      drawMarkers();
+    });
+  } else {
+    scrollTo(0, 0);
+  }
+}
+let lastCenter = null;
+document.body.dataset.pane = 'map';
+document.querySelectorAll('#mobile-toggle button').forEach(b =>
+  b.addEventListener('click', () => setPane(b.dataset.pane)));
+
 function switchView(name){
   document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-'+name));
   document.querySelectorAll('nav button').forEach(b =>
@@ -551,7 +655,9 @@ window.initMap = async function(){
   }
   map = new Map($('#map'), {
     center, zoom, mapId:'DEMO_MAP_ID',
-    mapTypeControl:false, streetViewControl:false, fullscreenControl:false
+    mapTypeControl:false, streetViewControl:false, fullscreenControl:false,
+    zoomControl:true,
+    gestureHandling:'greedy'   // one finger pans; 'auto' demands two on touch
   });
   if (!visited.length && navigator.geolocation){
     navigator.geolocation.getCurrentPosition(
@@ -560,6 +666,7 @@ window.initMap = async function(){
   }
   drawMarkers();
   renderPanelHome();
+  map.addListener('idle', scheduleAutoSearch);
 };
 
 async function drawMarkers(){
@@ -601,7 +708,7 @@ function renderPanelHome(){
         <input type="search" id="q" placeholder="Name or address" autocomplete="off">
         <button class="btn" id="go">Search</button>
       </div>
-      <button class="btn ghost sm" id="nearby">Search this map area</button>
+      <button class="btn ghost sm" id="nearby">Refresh this area</button>
       <div id="results" style="margin-top:14px"></div>
     </div>`;
   $('#go').addEventListener('click', doTextSearch);
@@ -651,6 +758,7 @@ async function doTextSearch(){
 }
 
 async function doNearby(){
+  lastAutoKey = '';
   $('#results').innerHTML = `<div class="empty">Searching…</div>`;
   try {
     const b = map.getBounds();
@@ -664,8 +772,51 @@ async function doNearby(){
   }
 }
 
+/* Automatic nearby search.
+   Fires when the map settles, but only if the view actually moved and we're
+   zoomed in enough for the results to be meaningful. Each call bills against
+   the Places quota, so the dedupe key and the zoom floor matter. */
+let autoTimer = null, lastAutoKey = '', autoBusy = false;
+const AUTO_MIN_ZOOM = 13;
+
+function scheduleAutoSearch(){
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(autoSearch, 700);
+}
+
+async function autoSearch(){
+  if (!map || autoBusy) return;
+  const z = map.getZoom();
+  if (z < AUTO_MIN_ZOOM){
+    const box = $('#results');
+    if (box && !lastResults.length){
+      box.innerHTML = `<div class="empty">Zoom in to see coffee shops in this area.</div>`;
+    }
+    return;
+  }
+  const c = map.getCenter();
+  const key = `${c.lat().toFixed(3)},${c.lng().toFixed(3)},${z}`;
+  if (key === lastAutoKey) return;
+  lastAutoKey = key;
+
+  autoBusy = true;
+  try {
+    const b = map.getBounds();
+    const { spherical } = await google.maps.importLibrary('geometry');
+    const radius = spherical.computeDistanceBetween(b.getNorthEast(), b.getSouthWest()) / 2;
+    lastResults = await Places.searchNearby(c, radius);
+    drawMarkers();
+    renderResults(lastResults, `${lastResults.length} in view`);
+  } catch(e){
+    console.warn('Auto search failed:', e.message);
+  } finally {
+    autoBusy = false;
+  }
+}
+
 function openShop(place, editingId){
   if (!place) return;
+  if (isPhone()) setPane('panel');
   selectedId = place.id;
   const saved = db.shops[place.id];
   const shop = saved || place;
@@ -746,7 +897,7 @@ function openShop(place, editingId){
           </div>`).join('')}</div>` : ''}
     </div>`;
 
-  $('#back').addEventListener('click', renderPanelHome);
+  $('#back').addEventListener('click', () => { renderPanelHome(); if (isPhone()) setPane('map'); });
   $('#drink').addEventListener('change', e => {
     $('#custom-wrap').hidden = e.target.value !== '__other';
     if (e.target.value === '__other') $('#custom').focus();
@@ -961,32 +1112,34 @@ function authMsg(t, bad){
   el.style.color = bad ? 'var(--cherry)' : 'var(--muted)';
 }
 
-$('#send-code').addEventListener('click', sendCode);
-$('#resend').addEventListener('click', sendCode);
-$('#email').addEventListener('keydown', e => { if (e.key === 'Enter') sendCode(); });
-$('#code').addEventListener('keydown', e => { if (e.key === 'Enter') verifyCode(); });
-$('#verify-code').addEventListener('click', verifyCode);
+$('#signin-btn').addEventListener('click', () => doAuth('in'));
+$('#signup-btn').addEventListener('click', () => doAuth('up'));
+$('#email').addEventListener('keydown', e => { if (e.key === 'Enter') $('#password').focus(); });
+$('#password').addEventListener('keydown', e => { if (e.key === 'Enter') doAuth('in'); });
 
-async function sendCode(){
+async function doAuth(mode){
   const email = $('#email').value.trim();
-  if (!email) { authMsg('Enter your email address.', true); return; }
-  authMsg('Sending…');
-  const { error } = await sb.auth.signInWithOtp({
-    email, options: { shouldCreateUser: true }
-  });
-  if (error) { authMsg(error.message, true); return; }
-  $('#code-step').hidden = false;
-  $('#code').focus();
-  authMsg('Check your email. Enter the six-digit code, or click the link in the message.');
-}
+  const password = $('#password').value;
+  if (!email || !password) { authMsg('Email and password are both required.', true); return; }
+  if (mode === 'up' && password.length < 8) {
+    authMsg('Use at least 8 characters.', true); return;
+  }
+  authMsg(mode === 'up' ? 'Creating account…' : 'Signing in…');
 
-async function verifyCode(){
-  const email = $('#email').value.trim();
-  const token = $('#code').value.trim();
-  if (token.length < 6) { authMsg('The code is six digits.', true); return; }
-  authMsg('Checking…');
-  const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
-  if (error) { authMsg(error.message, true); return; }
+  const { data, error } = mode === 'up'
+    ? await sb.auth.signUp({ email, password })
+    : await sb.auth.signInWithPassword({ email, password });
+
+  if (error){
+    authMsg(error.message === 'Invalid login credentials'
+      ? 'Wrong email or password. If this is your first time, use Create account.'
+      : error.message, true);
+    return;
+  }
+  if (!data.session){
+    authMsg('Account created. Check your email to confirm it, then sign in.');
+    return;
+  }
   session = data.session;
   await afterAuth();
 }
