@@ -1,0 +1,18 @@
+{
+  "name": "Cupping Log",
+  "short_name": "Cupping Log",
+  "description": "A personal record of coffee drinks, shop by shop.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ECEFF1",
+  "theme_color": "#ECEFF1",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cupping Log</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#ECEFF1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;800&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#ECEFF1;
+  --card:#FFFFFF;
+  --rule:#C7D2D9;
+  --ink:#14232B;
+  --muted:#5F7581;
+  --cherry:#C2222B;
+  --radius:2px;
+  --gap:20px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"Public Sans",system-ui,sans-serif;
+  font-size:15px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:"Syne",sans-serif;font-weight:800;letter-spacing:-0.02em;margin:0}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+
+/* ---------- shell ---------- */
+.masthead{
+  display:flex;align-items:baseline;gap:18px;flex-wrap:wrap;
+  padding:14px 22px 12px;border-bottom:1px solid var(--rule);background:var(--card);
+}
+.wordmark{font-size:19px;text-transform:uppercase;letter-spacing:0.01em}
+.wordmark .dot{color:var(--cherry)}
+.tagline{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase}
+nav{margin-left:auto;display:flex;gap:2px}
+nav button{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:0.09em;text-transform:uppercase;
+  background:none;border:1px solid transparent;color:var(--muted);
+  padding:7px 12px;cursor:pointer;border-radius:var(--radius);
+}
+nav button:hover{color:var(--ink)}
+nav button[aria-current="true"]{color:var(--ink);border-color:var(--rule);background:var(--paper)}
+main{padding:var(--gap)}
+.view[hidden]{display:none}
+
+/* ---------- map view ---------- */
+.split{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:var(--gap);align-items:start}
+.frame{background:var(--card);border:1px solid var(--rule);border-radius:var(--radius)}
+#map{height:calc(100vh - 190px);min-height:420px;width:100%;border-radius:var(--radius)}
+.panel{max-height:calc(100vh - 130px);overflow-y:auto}
+.panel-pad{padding:16px 18px}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:0.12em;
+  text-transform:uppercase;color:var(--muted);
+}
+.searchbar{display:flex;gap:8px;margin-bottom:14px}
+input[type=text],input[type=search],input[type=date],input[type=number],select,textarea{
+  font-family:"Public Sans",sans-serif;font-size:14px;color:var(--ink);
+  background:var(--card);border:1px solid var(--rule);border-radius:var(--radius);
+  padding:8px 10px;width:100%;
+}
+textarea{resize:vertical;min-height:78px;line-height:1.55}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{
+  outline:2px solid var(--cherry);outline-offset:1px;
+}
+.btn{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:0.08em;text-transform:uppercase;
+  background:var(--ink);color:var(--paper);border:1px solid var(--ink);
+  padding:9px 14px;border-radius:var(--radius);cursor:pointer;white-space:nowrap;
+}
+.btn:hover{background:#000}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+.btn.ghost:hover{background:var(--paper)}
+.btn.cherry{background:var(--cherry);border-color:var(--cherry);color:#fff}
+.btn.cherry:hover{filter:brightness(0.92)}
+.btn:disabled{opacity:0.4;cursor:default}
+.btn.sm{padding:5px 9px;font-size:10.5px}
+
+.result{
+  display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--rule);
+  padding:11px 4px;cursor:pointer;font-family:inherit;font-size:14px;color:var(--ink);
+}
+.result:hover{background:var(--paper)}
+.result .addr{font-size:12.5px;color:var(--muted);margin-top:1px}
+.result .tag{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--cherry);letter-spacing:0.1em}
+
+/* ---------- signature: the score strip ---------- */
+.strip{display:flex;align-items:center;gap:10px}
+.strip .track{
+  position:relative;flex:1;height:12px;background:var(--paper);
+  border:1px solid var(--rule);border-radius:1px;overflow:hidden;
+}
+.strip .track::after{ /* integer ticks, 0-10 */
+  content:"";position:absolute;inset:0;
+  background-image:repeating-linear-gradient(to right,var(--rule) 0 1px,transparent 1px 10%);
+  opacity:0.85;
+}
+.strip .fill{position:absolute;inset:0 auto 0 0;background:var(--cherry)}
+.strip .val{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:13px;min-width:34px;text-align:right}
+.strip .lbl{font-size:13px;min-width:104px}
+.strip.tiny .track{height:8px}
+.strip.tiny .val{font-size:11.5px}
+
+/* ---------- shop detail ---------- */
+.shop-title{font-size:22px;line-height:1.15;margin-bottom:3px}
+.shop-addr{font-size:13px;color:var(--muted);margin-bottom:14px}
+.divider{border:0;border-top:1px solid var(--rule);margin:16px 0}
+.field{margin-bottom:12px}
+.field label{display:block;margin-bottom:5px}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+.score-input{display:flex;align-items:center;gap:12px}
+.score-input input[type=range]{flex:1;accent-color:var(--cherry)}
+.score-input .readout{font-family:"IBM Plex Mono",monospace;font-size:26px;font-weight:600;min-width:62px;text-align:right}
+.entry{border-top:1px solid var(--rule);padding:11px 0}
+.entry-head{display:flex;align-items:baseline;gap:8px}
+.entry-head .drink{font-weight:600;font-size:14px}
+.entry-head .date{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);margin-left:auto}
+.entry .note{font-size:13.5px;color:var(--muted);font-style:italic;margin-top:4px}
+.linkbtn{background:none;border:0;color:var(--muted);font-size:11px;cursor:pointer;padding:0;text-decoration:underline}
+.linkbtn:hover{color:var(--cherry)}
+
+/* ---------- rankings ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 18px}
+.chip{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;
+  border:1px solid var(--rule);background:var(--card);color:var(--muted);
+  padding:6px 11px;border-radius:var(--radius);cursor:pointer;
+}
+.chip:hover{color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.rank{display:grid;grid-template-columns:34px minmax(0,1fr) 200px;gap:14px;align-items:center;
+  border-top:1px solid var(--rule);padding:13px 0}
+.rank .pos{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
+.rank .name{font-weight:600;font-size:15px;cursor:pointer}
+.rank .name:hover{color:var(--cherry)}
+.rank .stats{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);margin-top:2px}
+.controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.controls label{display:flex;align-items:center;gap:6px;cursor:pointer}
+
+/* ---------- shops list ---------- */
+.shoprow{border-top:1px solid var(--rule);padding:15px 0;display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:18px}
+.shoprow .nm{font-weight:600;font-size:15.5px;cursor:pointer}
+.shoprow .nm:hover{color:var(--cherry)}
+.shoprow .nt{font-size:13.5px;color:var(--muted);margin-top:4px;white-space:pre-wrap}
+
+/* ---------- setup / settings ---------- */
+.narrow{max-width:660px}
+.setup h2{font-size:26px;margin-bottom:8px}
+.setup p{color:var(--muted);font-size:14px}
+.setup ol{color:var(--muted);font-size:14px;padding-left:20px}
+.setup ol li{margin-bottom:6px}
+.setup code{font-family:"IBM Plex Mono",monospace;font-size:12.5px;background:var(--paper);padding:1px 5px;border:1px solid var(--rule)}
+.empty{color:var(--muted);font-size:14px;padding:24px 0;border-top:1px solid var(--rule)}
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
+  background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:var(--radius);
+  font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:0.05em;z-index:50;
+}
+.warn{border-left:3px solid var(--cherry);padding:10px 14px;background:var(--card);font-size:13.5px;margin:14px 0}
+
+/* ---------- map markers ---------- */
+.pin{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:600;
+  background:var(--cherry);color:#fff;padding:3px 7px;border-radius:2px;
+  border:1px solid rgba(0,0,0,0.25);white-space:nowrap;cursor:pointer;
+}
+.pin.unvisited{background:var(--card);color:var(--ink);border-color:var(--ink)}
+
+@media (max-width:900px){
+  .split{grid-template-columns:1fr}
+  #map{height:52vh;min-height:300px}
+  .panel{max-height:none}
+  .rank{grid-template-columns:26px minmax(0,1fr);}
+  .rank .strip{grid-column:1/-1}
+  .shoprow{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <h1 class="wordmark">Cupping Log<span class="dot">.</span></h1>
+  <span class="tagline">personal coffee record</span>
+  <nav>
+    <button data-view="map" aria-current="true">Map</button>
+    <button data-view="rankings">Rankings</button>
+    <button data-view="shops">Shops</button>
+    <button data-view="settings">Settings</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ============ MAP ============ -->
+<section class="view" id="view-map">
+  <div id="setup" class="frame narrow setup panel-pad" hidden>
+    <h2>Add your Google Maps key to begin</h2>
+    <p>The key stays in this browser's local storage. It is never committed to the repository.</p>
+    <ol>
+      <li>Create a project at <code>console.cloud.google.com</code> and enable billing.</li>
+      <li>Enable <strong>Maps JavaScript API</strong> and <strong>Places API (New)</strong>.</li>
+      <li>Create an API key. Restrict it: <em>Website restrictions</em> → your Pages URL; <em>API restrictions</em> → those two APIs only.</li>
+      <li>Set a daily quota cap on each API so a leaked key can't run up a bill.</li>
+    </ol>
+    <div class="field" style="margin-top:16px">
+      <label class="eyebrow" for="setup-key">API key</label>
+      <input type="text" id="setup-key" placeholder="AIza…" autocomplete="off" spellcheck="false">
+    </div>
+    <button class="btn cherry" id="setup-save">Load the map</button>
+  </div>
+
+  <div class="split" id="map-split">
+    <div class="frame"><div id="map"></div></div>
+    <div class="frame panel" id="panel"></div>
+  </div>
+</section>
+
+<!-- ============ RANKINGS ============ -->
+<section class="view" id="view-rankings" hidden>
+  <div class="frame panel-pad narrow" style="max-width:960px">
+    <span class="eyebrow">Ranked by drink</span>
+    <div class="chips" id="drink-chips"></div>
+    <div class="controls">
+      <label><input type="radio" name="rankmode" value="mean" checked> Raw mean</label>
+      <label><input type="radio" name="rankmode" value="shrunk"> Shrunk mean</label>
+      <span id="rank-explain" class="mono" style="font-size:11px"></span>
+    </div>
+    <div id="rank-list"></div>
+  </div>
+</section>
+
+<!-- ============ SHOPS ============ -->
+<section class="view" id="view-shops" hidden>
+  <div class="frame panel-pad narrow" style="max-width:960px">
+    <span class="eyebrow">Every shop you've logged</span>
+    <div id="shop-list"></div>
+  </div>
+</section>
+
+<!-- ============ SETTINGS ============ -->
+<section class="view" id="view-settings" hidden>
+  <div class="frame panel-pad narrow setup">
+    <h2>Settings</h2>
+    <hr class="divider">
+    <span class="eyebrow">Google Maps API key</span>
+    <div class="field" style="margin-top:8px">
+      <input type="text" id="key-input" placeholder="AIza…" autocomplete="off" spellcheck="false">
+    </div>
+    <button class="btn" id="key-save">Save key</button>
+    <p style="font-size:13px">Stored locally in this browser only. Changing it reloads the page.</p>
+
+    <hr class="divider">
+    <span class="eyebrow">Your data</span>
+    <p>Everything lives in this browser. Clearing site data erases it. Export regularly — the file is your only backup.</p>
+    <div class="row" style="max-width:480px">
+      <button class="btn" id="export-btn">Export JSON</button>
+      <button class="btn ghost" id="import-btn">Import JSON</button>
+    </div>
+    <input type="file" id="import-file" accept="application/json,.json" hidden>
+    <p class="mono" style="font-size:12px" id="stats-line"></p>
+
+    <hr class="divider">
+    <span class="eyebrow">Danger</span>
+    <p>Deletes every shop, rating, and note in this browser.</p>
+    <button class="btn ghost" id="wipe-btn" style="color:var(--cherry);border-color:var(--cherry)">Erase everything</button>
+    <div id="storage-warning"></div>
+  </div>
+</section>
+
+</main>
+
+<script>
+/* =======================================================================
+   STORAGE ADAPTER
+   Everything goes through this. Swapping to a synced backend later means
+   replacing these four functions, nothing else.
+   ======================================================================= */
+const Store = (() => {
+  const KEY = 'cuppinglog.v1';
+  let usable = true;
+  let mem = null;
+  try {
+    localStorage.setItem('__probe__','1');
+    localStorage.removeItem('__probe__');
+  } catch (e) { usable = false; }
+
+  const blank = () => ({ shops:{}, ratings:[], apiKey:'' });
+
+  function read(){
+    if (!usable) return mem ??= blank();
+    try {
+      const raw = localStorage.getItem(KEY);
+      return raw ? JSON.parse(raw) : blank();
+    } catch(e){ return blank(); }
+  }
+  function write(data){
+    if (!usable){ mem = data; return; }
+    try { localStorage.setItem(KEY, JSON.stringify(data)); }
+    catch(e){ toast('Could not save — storage is full or blocked'); }
+  }
+  return { read, write, usable, blank };
+})();
+
+let db = Store.read();
+const save = () => Store.write(db);
+
+/* =======================================================================
+   MODEL
+   ======================================================================= */
+const DRINKS = ['Espresso','Doppio','Macchiato','Cortado','Piccolo','Flat white',
+  'Cappuccino','Latte','Mocha','Americano','Long black','Drip','Pour-over',
+  'Batch brew','Cold brew','Iced latte','Espresso tonic','Affogato'];
+
+const PRIOR_WEIGHT = 2;   // pseudo-observations pulling a shop toward the global mean
+const uid = () => Math.random().toString(36).slice(2,10);
+
+function ratingsFor(shopId, drink){
+  return db.ratings.filter(r => r.shopId === shopId && (!drink || r.drink === drink));
+}
+function mean(xs){ return xs.reduce((a,b)=>a+b,0) / xs.length; }
+function sd(xs){
+  if (xs.length < 2) return null;
+  const m = mean(xs);
+  return Math.sqrt(xs.reduce((a,b)=>a+(b-m)**2,0) / (xs.length-1));
+}
+function shopMean(shopId, drink){
+  const rs = ratingsFor(shopId, drink);
+  return rs.length ? mean(rs.map(r=>r.score)) : null;
+}
+function usedDrinks(){
+  return [...new Set(db.ratings.map(r=>r.drink))].sort((a,b)=>a.localeCompare(b));
+}
+
+/* =======================================================================
+   UI HELPERS
+   ======================================================================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function toast(msg){
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 2600);
+}
+
+/* The signature element: a 0–10 scale with integer ticks and a pinned value. */
+function strip(score, label, tiny){
+  const pct = Math.max(0, Math.min(100, score*10));
+  return `<div class="strip${tiny?' tiny':''}">
+    ${label ? `<span class="lbl">${esc(label)}</span>` : ''}
+    <span class="track"><span class="fill" style="width:${pct}%"></span></span>
+    <span class="val">${score.toFixed(1)}</span>
+  </div>`;
+}
+
+function switchView(name){
+  document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-'+name));
+  document.querySelectorAll('nav button').forEach(b =>
+    b.setAttribute('aria-current', String(b.dataset.view === name)));
+  if (name === 'rankings') renderRankings();
+  if (name === 'shops') renderShops();
+  if (name === 'settings') renderSettings();
+  if (name === 'map' && window.google && map) google.maps.event.trigger(map,'resize');
+}
+document.querySelectorAll('nav button').forEach(b =>
+  b.addEventListener('click', () => switchView(b.dataset.view)));
+
+/* =======================================================================
+   PLACES ADAPTER
+   Only this object talks to Google. Replacing it with another provider
+   means matching the shape {id,name,address,lat,lng}.
+   ======================================================================= */
+const Places = {
+  async searchText(query, center){
+    const { Place } = await google.maps.importLibrary('places');
+    const { places } = await Place.searchByText({
+      textQuery: query,
+      fields: ['id','displayName','formattedAddress','location'],
+      includedType: 'cafe',
+      locationBias: center,
+      maxResultCount: 12,
+      language: 'en-US', region: 'us'
+    });
+    return (places || []).map(normalize);
+  },
+  async searchNearby(center, radius){
+    const { Place, SearchNearbyRankPreference } = await google.maps.importLibrary('places');
+    const { places } = await Place.searchNearby({
+      fields: ['id','displayName','formattedAddress','location'],
+      locationRestriction: { center, radius: Math.min(radius, 50000) },
+      includedPrimaryTypes: ['coffee_shop','cafe'],
+      maxResultCount: 20,
+      rankPreference: SearchNearbyRankPreference.DISTANCE
+    });
+    return (places || []).map(normalize);
+  }
+};
+function normalize(p){
+  return {
+    id: p.id,
+    name: p.displayName,
+    address: p.formattedAddress || '',
+    lat: p.location.lat(),
+    lng: p.location.lng()
+  };
+}
+
+/* =======================================================================
+   MAP
+   ======================================================================= */
+let map, markers = [], lastResults = [], selectedId = null;
+
+function bootMaps(key){
+  const s = document.createElement('script');
+  s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}`
+        + `&v=weekly&libraries=places,marker&loading=async&callback=initMap`;
+  s.async = true;
+  s.onerror = () => { $('#panel').innerHTML =
+    `<div class="panel-pad"><div class="warn">The Maps script failed to load. Check the key in Settings and confirm both APIs are enabled.</div></div>`; };
+  document.head.appendChild(s);
+  window.gm_authFailure = () => { $('#panel').innerHTML =
+    `<div class="panel-pad"><div class="warn">Google rejected this key. Common causes: the referrer restriction doesn't include this URL, billing isn't enabled, or Places API (New) is off.</div></div>`; };
+}
+
+window.initMap = async function(){
+  const { Map } = await google.maps.importLibrary('maps');
+  const visited = Object.values(db.shops);
+  let center = { lat:39.83, lng:-98.58 }, zoom = 4;
+  if (visited.length){
+    center = { lat: mean(visited.map(s=>s.lat)), lng: mean(visited.map(s=>s.lng)) };
+    zoom = visited.length === 1 ? 14 : 11;
+  }
+  map = new Map($('#map'), {
+    center, zoom, mapId:'DEMO_MAP_ID',
+    mapTypeControl:false, streetViewControl:false, fullscreenControl:false
+  });
+  if (!visited.length && navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      pos => { map.setCenter({lat:pos.coords.latitude, lng:pos.coords.longitude}); map.setZoom(14); },
+      () => {}, { timeout:6000 });
+  }
+  drawMarkers();
+  renderPanelHome();
+};
+
+async function drawMarkers(){
+  const { AdvancedMarkerElement } = await google.maps.importLibrary('marker');
+  markers.forEach(m => m.map = null);
+  markers = [];
+
+  const shown = new Set();
+  for (const shop of Object.values(db.shops)){
+    shown.add(shop.id);
+    const avg = shopMean(shop.id);
+    markers.push(pin(AdvancedMarkerElement, shop, avg === null ? '·' : avg.toFixed(1), false));
+  }
+  for (const r of lastResults){
+    if (shown.has(r.id)) continue;
+    markers.push(pin(AdvancedMarkerElement, r, '+', true));
+  }
+}
+function pin(AME, place, text, unvisited){
+  const el = document.createElement('div');
+  el.className = 'pin' + (unvisited ? ' unvisited' : '');
+  el.textContent = text;
+  el.title = place.name;
+  const m = new AME({ map, position:{lat:place.lat, lng:place.lng}, content:el,
+                      title:place.name, gmpClickable:true });
+  m.addListener('click', () => openShop(place));
+  return m;
+}
+
+/* =======================================================================
+   PANEL — search, shop detail, rating form
+   ======================================================================= */
+function renderPanelHome(){
+  selectedId = null;
+  $('#panel').innerHTML = `
+    <div class="panel-pad">
+      <span class="eyebrow">Find a shop</span>
+      <div class="searchbar" style="margin-top:8px">
+        <input type="search" id="q" placeholder="Name or address" autocomplete="off">
+        <button class="btn" id="go">Search</button>
+      </div>
+      <button class="btn ghost sm" id="nearby">Search this map area</button>
+      <div id="results" style="margin-top:14px"></div>
+    </div>`;
+  $('#go').addEventListener('click', doTextSearch);
+  $('#q').addEventListener('keydown', e => { if (e.key === 'Enter') doTextSearch(); });
+  $('#nearby').addEventListener('click', doNearby);
+  renderResults(Object.values(db.shops).slice(0,50), 'Your shops');
+}
+
+function renderResults(list, heading){
+  const box = $('#results');
+  if (!box) return;
+  if (!list.length){
+    box.innerHTML = `<div class="empty">Nothing yet. Search for a shop, or pan the map and search this area.</div>`;
+    return;
+  }
+  box.innerHTML = `<span class="eyebrow">${esc(heading)}</span>` + list.map(p => {
+    const known = !!db.shops[p.id];
+    const avg = known ? shopMean(p.id) : null;
+    return `<button class="result" data-id="${esc(p.id)}">
+      <div>${esc(p.name)} ${known ? `<span class="tag">${avg===null?'LOGGED':avg.toFixed(1)}</span>` : ''}</div>
+      <div class="addr">${esc(p.address)}</div>
+    </button>`;
+  }).join('');
+  box.querySelectorAll('.result').forEach(b =>
+    b.addEventListener('click', () => {
+      const p = list.find(x => x.id === b.dataset.id);
+      openShop(p);
+    }));
+}
+
+async function doTextSearch(){
+  const q = $('#q').value.trim();
+  if (!q) return;
+  $('#results').innerHTML = `<div class="empty">Searching…</div>`;
+  try {
+    lastResults = await Places.searchText(q, map.getCenter());
+    renderResults(lastResults, `${lastResults.length} result${lastResults.length===1?'':'s'}`);
+    drawMarkers();
+    if (lastResults.length){
+      const b = new google.maps.LatLngBounds();
+      lastResults.forEach(r => b.extend({lat:r.lat, lng:r.lng}));
+      map.fitBounds(b);
+    }
+  } catch(e){
+    $('#results').innerHTML = `<div class="warn">Search failed: ${esc(e.message)}</div>`;
+  }
+}
+
+async function doNearby(){
+  $('#results').innerHTML = `<div class="empty">Searching…</div>`;
+  try {
+    const b = map.getBounds();
+    const { spherical } = await google.maps.importLibrary('geometry');
+    const diameter = spherical.computeDistanceBetween(b.getNorthEast(), b.getSouthWest());
+    lastResults = await Places.searchNearby(map.getCenter(), diameter/2);
+    renderResults(lastResults, `${lastResults.length} nearby`);
+    drawMarkers();
+  } catch(e){
+    $('#results').innerHTML = `<div class="warn">Search failed: ${esc(e.message)}</div>`;
+  }
+}
+
+function openShop(place){
+  if (!place) return;
+  selectedId = place.id;
+  const saved = db.shops[place.id];
+  const shop = saved || place;
+  const rs = ratingsFor(shop.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+  // per-drink summary for this shop
+  const byDrink = {};
+  rs.forEach(r => (byDrink[r.drink] ??= []).push(r.score));
+  const summary = Object.entries(byDrink)
+    .map(([d, xs]) => ({ d, m: mean(xs), n: xs.length }))
+    .sort((a,b) => b.m - a.m);
+
+  $('#panel').innerHTML = `
+    <div class="panel-pad">
+      <button class="linkbtn" id="back">← back to search</button>
+      <h2 class="shop-title" style="margin-top:10px">${esc(shop.name)}</h2>
+      <div class="shop-addr">${esc(shop.address)}</div>
+
+      ${summary.length ? `<span class="eyebrow">Your averages</span>
+        <div style="margin:8px 0 4px">${summary.map(s =>
+          strip(s.m, `${s.d} ×${s.n}`, true)).join('')}</div>` : ''}
+
+      <hr class="divider">
+      <span class="eyebrow">Log a drink</span>
+      <div class="field" style="margin-top:8px">
+        <label for="drink">Drink</label>
+        <select id="drink">
+          ${DRINKS.map(d => `<option>${d}</option>`).join('')}
+          <option value="__other">Something else…</option>
+        </select>
+      </div>
+      <div class="field" id="custom-wrap" hidden>
+        <label for="custom">Name it</label>
+        <input type="text" id="custom" placeholder="e.g. Cascara soda">
+      </div>
+      <div class="field">
+        <label for="score">Score</label>
+        <div class="score-input">
+          <input type="range" id="score" min="0" max="10" step="0.1" value="7.0">
+          <span class="readout mono" id="readout">7.0</span>
+        </div>
+      </div>
+      <div class="field">
+        <label for="date">Date</label>
+        <input type="date" id="date" value="${new Date().toISOString().slice(0,10)}">
+      </div>
+      <div class="field">
+        <label for="rnote">Note on this drink</label>
+        <textarea id="rnote" placeholder="Extraction, milk texture, temperature…"></textarea>
+      </div>
+      <button class="btn cherry" id="save-rating">Save rating</button>
+
+      <hr class="divider">
+      <span class="eyebrow">Notes on the shop</span>
+      <div class="field" style="margin-top:8px">
+        <textarea id="shopnote" placeholder="Roaster, equipment, seating, wifi, who's on bar…">${esc(shop.notes||'')}</textarea>
+      </div>
+      <span class="mono" style="font-size:11px;color:var(--muted)" id="notestate"></span>
+
+      ${rs.length ? `<hr class="divider"><span class="eyebrow">${rs.length} visit${rs.length===1?'':'s'}</span>
+        <div style="margin-top:6px">${rs.map(r => `
+          <div class="entry">
+            <div class="entry-head">
+              <span class="drink">${esc(r.drink)}</span>
+              <span class="date">${esc(r.date||'')}</span>
+            </div>
+            <div style="margin-top:6px">${strip(r.score, null, true)}</div>
+            ${r.note ? `<div class="note">${esc(r.note)}</div>` : ''}
+            <button class="linkbtn" data-del="${r.id}" style="margin-top:6px">delete</button>
+          </div>`).join('')}</div>` : ''}
+    </div>`;
+
+  $('#back').addEventListener('click', renderPanelHome);
+  $('#drink').addEventListener('change', e => {
+    $('#custom-wrap').hidden = e.target.value !== '__other';
+    if (e.target.value === '__other') $('#custom').focus();
+  });
+  $('#score').addEventListener('input', e => $('#readout').textContent = (+e.target.value).toFixed(1));
+  $('#save-rating').addEventListener('click', () => saveRating(shop));
+
+  let noteTimer;
+  $('#shopnote').addEventListener('input', e => {
+    clearTimeout(noteTimer);
+    $('#notestate').textContent = '…';
+    noteTimer = setTimeout(() => {
+      ensureShop(shop).notes = e.target.value;
+      save();
+      $('#notestate').textContent = 'saved';
+      setTimeout(()=>{ const n=$('#notestate'); if(n) n.textContent=''; }, 1500);
+    }, 500);
+  });
+
+  $('#panel').querySelectorAll('[data-del]').forEach(b =>
+    b.addEventListener('click', () => {
+      db.ratings = db.ratings.filter(r => r.id !== b.dataset.del);
+      save(); drawMarkers(); openShop(db.shops[shop.id] || shop);
+      toast('Rating deleted');
+    }));
+}
+
+function ensureShop(place){
+  if (!db.shops[place.id]){
+    db.shops[place.id] = {
+      id: place.id, name: place.name, address: place.address,
+      lat: place.lat, lng: place.lng, notes: '', addedAt: new Date().toISOString()
+    };
+  }
+  return db.shops[place.id];
+}
+
+function saveRating(place){
+  const sel = $('#drink').value;
+  const drink = sel === '__other' ? $('#custom').value.trim() : sel;
+  if (!drink){ toast('Name the drink first'); $('#custom').focus(); return; }
+  ensureShop(place);
+  db.ratings.push({
+    id: uid(), shopId: place.id, drink,
+    score: +(+$('#score').value).toFixed(1),
+    date: $('#date').value,
+    note: $('#rnote').value.trim()
+  });
+  save();
+  drawMarkers();
+  openShop(db.shops[place.id]);
+  toast(`${drink} logged`);
+}
+
+/* =======================================================================
+   RANKINGS
+   ======================================================================= */
+let activeDrink = null;   // null = all drinks pooled
+
+function renderRankings(){
+  const drinks = usedDrinks();
+  $('#drink-chips').innerHTML =
+    `<button class="chip" data-drink="" aria-pressed="${activeDrink===null}">All drinks</button>` +
+    drinks.map(d => `<button class="chip" data-drink="${esc(d)}" aria-pressed="${activeDrink===d}">${esc(d)}</button>`).join('');
+  $('#drink-chips').querySelectorAll('.chip').forEach(c =>
+    c.addEventListener('click', () => { activeDrink = c.dataset.drink || null; renderRankings(); }));
+
+  const mode = document.querySelector('input[name=rankmode]:checked').value;
+  const pool = activeDrink ? db.ratings.filter(r => r.drink === activeDrink) : db.ratings;
+
+  if (!pool.length){
+    $('#rank-list').innerHTML = `<div class="empty">No ratings for this drink yet. Log one from the map.</div>`;
+    $('#rank-explain').textContent = '';
+    return;
+  }
+
+  const globalMean = mean(pool.map(r => r.score));
+  const groups = {};
+  pool.forEach(r => (groups[r.shopId] ??= []).push(r.score));
+
+  const rows = Object.entries(groups).map(([shopId, xs]) => {
+    const m = mean(xs);
+    const shrunk = (PRIOR_WEIGHT*globalMean + xs.reduce((a,b)=>a+b,0)) / (PRIOR_WEIGHT + xs.length);
+    return { shopId, n: xs.length, m, s: sd(xs), shrunk, sort: mode==='shrunk' ? shrunk : m };
+  }).sort((a,b) => b.sort - a.sort || b.n - a.n);
+
+  $('#rank-explain').textContent = mode === 'shrunk'
+    ? `x̄* = (${PRIOR_WEIGHT}·${globalMean.toFixed(2)} + Σx) / (${PRIOR_WEIGHT} + n)`
+    : `pooled mean ${globalMean.toFixed(2)}, n = ${pool.length}`;
+
+  $('#rank-list').innerHTML = rows.map((r,i) => {
+    const shop = db.shops[r.shopId];
+    if (!shop) return '';
+    const shown = mode === 'shrunk' ? r.shrunk : r.m;
+    return `<div class="rank">
+      <span class="pos">${String(i+1).padStart(2,'0')}</span>
+      <div>
+        <div class="name" data-shop="${esc(r.shopId)}">${esc(shop.name)}</div>
+        <div class="stats">n=${r.n} · x̄=${r.m.toFixed(2)}${r.s!==null?` · s=${r.s.toFixed(2)}`:''}${mode==='shrunk'?` · x̄*=${r.shrunk.toFixed(2)}`:''}</div>
+      </div>
+      ${strip(shown, null, false)}
+    </div>`;
+  }).join('');
+
+  $('#rank-list').querySelectorAll('[data-shop]').forEach(el =>
+    el.addEventListener('click', () => { switchView('map'); openShop(db.shops[el.dataset.shop]); }));
+}
+document.querySelectorAll('input[name=rankmode]').forEach(r =>
+  r.addEventListener('change', renderRankings));
+
+/* =======================================================================
+   SHOPS LIST
+   ======================================================================= */
+function renderShops(){
+  const shops = Object.values(db.shops).sort((a,b) => a.name.localeCompare(b.name));
+  if (!shops.length){
+    $('#shop-list').innerHTML = `<div class="empty">No shops yet. Find one on the map and log a drink.</div>`;
+    return;
+  }
+  $('#shop-list').innerHTML = shops.map(s => {
+    const rs = ratingsFor(s.id);
+    const byDrink = {};
+    rs.forEach(r => (byDrink[r.drink] ??= []).push(r.score));
+    const tops = Object.entries(byDrink).map(([d,xs]) => ({d, m:mean(xs), n:xs.length}))
+      .sort((a,b)=>b.m-a.m).slice(0,3);
+    return `<div class="shoprow">
+      <div>
+        <div class="nm" data-shop="${esc(s.id)}">${esc(s.name)}</div>
+        <div class="stats mono" style="font-size:11px;color:var(--muted)">${esc(s.address)}</div>
+        ${s.notes ? `<div class="nt">${esc(s.notes)}</div>` : ''}
+      </div>
+      <div>${tops.length ? tops.map(t => strip(t.m, `${t.d} ×${t.n}`, true)).join('')
+        : `<span class="mono" style="font-size:11px;color:var(--muted)">no ratings</span>`}</div>
+    </div>`;
+  }).join('');
+  $('#shop-list').querySelectorAll('[data-shop]').forEach(el =>
+    el.addEventListener('click', () => { switchView('map'); openShop(db.shops[el.dataset.shop]); }));
+}
+
+/* =======================================================================
+   SETTINGS
+   ======================================================================= */
+function renderSettings(){
+  $('#key-input').value = db.apiKey || '';
+  const nShops = Object.keys(db.shops).length;
+  $('#stats-line').textContent = `${nShops} shop${nShops===1?'':'s'} · ${db.ratings.length} rating${db.ratings.length===1?'':'s'}`;
+  $('#storage-warning').innerHTML = Store.usable ? '' :
+    `<div class="warn">This browser is blocking local storage, so nothing will persist after you close the tab. On a real GitHub Pages URL it works normally.</div>`;
+}
+
+$('#key-save').addEventListener('click', () => {
+  db.apiKey = $('#key-input').value.trim();
+  save();
+  location.reload();
+});
+$('#setup-save').addEventListener('click', () => {
+  const k = $('#setup-key').value.trim();
+  if (!k) return;
+  db.apiKey = k; save(); location.reload();
+});
+
+$('#export-btn').addEventListener('click', () => {
+  const payload = { exportedAt:new Date().toISOString(), version:1, shops:db.shops, ratings:db.ratings };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)], {type:'application/json'}));
+  const a = document.createElement('a');
+  a.href = url; a.download = `cupping-log-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+});
+
+$('#import-btn').addEventListener('click', () => $('#import-file').click());
+$('#import-file').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!data.shops || !Array.isArray(data.ratings)) throw new Error('Not a Cupping Log export');
+    const before = db.ratings.length;
+    Object.assign(db.shops, data.shops);
+    const seen = new Set(db.ratings.map(r => r.id));
+    data.ratings.forEach(r => { if (!seen.has(r.id)) db.ratings.push(r); });
+    save(); renderSettings();
+    toast(`Merged ${db.ratings.length - before} new ratings`);
+  } catch(err){
+    toast('Import failed: ' + err.message);
+  }
+  e.target.value = '';
+});
+
+$('#wipe-btn').addEventListener('click', () => {
+  if (!confirm('Erase every shop, rating, and note? This cannot be undone. Export first if you want a copy.')) return;
+  const k = db.apiKey;
+  db = Store.blank(); db.apiKey = k;
+  save(); renderSettings(); toast('Everything erased');
+});
+
+/* =======================================================================
+   BOOT
+   ======================================================================= */
+if (db.apiKey){
+  $('#setup').hidden = true;
+  $('#map-split').hidden = false;
+  bootMaps(db.apiKey);
+} else {
+  $('#setup').hidden = false;
+  $('#map-split').hidden = true;
+}
+</script>
+</body>
+</html>
